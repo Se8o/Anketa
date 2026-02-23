@@ -1,4 +1,4 @@
-# 📊 Anketa – Záložkový průzkum
+# Anketa – Záložkový průzkum
 
 > Jednoduchá hlasovací webová aplikace | Python · Flask · Render.com
 
@@ -46,7 +46,7 @@ Wireframe zachycuje tři stavy jedné stránky. Navigace mezi nimi probíhá bez
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│           📊 Anketa – Záložkový průzkum              [nav]  │
+│           Anketa – Záložkový průzkum              [nav]  │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  Kolik otevřených záložek je ještě normální?                │
@@ -67,10 +67,10 @@ Wireframe zachycuje tři stavy jedné stránky. Navigace mezi nimi probíhá bez
 │  d) █████████░░░░░░░░░   9 hlasů  (21%)                   │
 │                                                             │
 ├─────────────────────────────────────────────────────────────┤
-│  🔒 Reset hlasování                                         │
+│  Reset hlasování                                         │
 │  Token: [________________]  [ Resetovat ]                   │
 │                                                             │
-│  ⚠ Nesprávný token.  /  ✓ Hlasování bylo resetováno.      │
+│  Nesprávný token.  /  Hlasování bylo resetováno.      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -95,19 +95,19 @@ stateDiagram-v2
 
 ```mermaid
 graph TD
-    DEV["👨‍💻 Vývojář (local)"]
-    GH["📦 GitHub Repository"]
-    RENDER["☁️ Render.com – Free Web Service"]
+    DEV["Vývojář (local)"]
+    GH["GitHub Repository"]
+    RENDER["Render.com – Free Web Service"]
 
     subgraph RENDER["☁️ Render.com – Free Web Service"]
-        GUNICORN["🦄 Gunicorn (WSGI)"]
-        FLASK["🐍 Flask app (app.py)"]
-        DATA["📄 data.json (hlasy)"]
-        ENV["🔑 ENV: RESET_TOKEN"]
-        LOGS["📋 stdout → Render Logs"]
+        GUNICORN["Gunicorn (WSGI)"]
+        FLASK["Flask app (app.py)"]
+        DATA["data.json (hlasy)"]
+        ENV["ENV: RESET_TOKEN"]
+        LOGS["stdout → Render Logs"]
     end
 
-    BROWSER["🌐 Prohlížeč (uživatel)"]
+    BROWSER["Prohlížeč (uživatel)"]
 
     DEV -->|git push| GH
     GH -->|auto-deploy webhook| RENDER
@@ -287,7 +287,7 @@ DATA_FILE=data/votes.json
 | `RESET_TOKEN` | `"zmenit_pred_deploymentem"` | Token pro reset hlasů |
 | `DATA_FILE` | `"data/votes.json"` | Cesta k souboru s hlasy |
 
-> **⚠️ Upozornění:** Soubor `.env` přidej do `.gitignore`. Nikdy ho nenahrávej na GitHub!  
+> **Upozornění:** Soubor `.env` přidej do `.gitignore`. Nikdy ho nenahrávej na GitHub!  
 > Na Render.com se token nastavuje v sekci **Environment → Add Environment Variable**.
 
 ---
@@ -334,6 +334,3 @@ flask run                         # http://localhost:5000
 > Pro plnou perzistenci použij **Render Persistent Disk** (placená volba) nebo ulož hlasy do **SQLite / externího Redis**.  
 > Pro účely školní úlohy postačí in-memory slovník nebo lokální soubor.
 
----
-
-*Dokumentace generována: 2026-02-23 | Technologie: Python 3, Flask, Gunicorn, Render.com*
