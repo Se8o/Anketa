@@ -1,0 +1,20 @@
+# Prostředí
+.env
+venv/
+.venv/
+
+# Data (hlasy) – lokální soubor, nesdílet
+data/votes.json
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# IDE
+.vscode/
+.idea/
+
+# Render / Heroku
+*.log
+logs/*.log
