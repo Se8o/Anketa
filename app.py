@@ -1,6 +1,7 @@
 """Anketa – Záložkový průzkum
 
-Flask voting application with thread-safe persistent JSON storage.
+Flask voting application with thread-safe persistent JSON storage
+and cookie-based one-vote-per-user enforcement.
 """
 
 from __future__ import annotations
@@ -14,7 +15,7 @@ from pathlib import Path
 from typing import TypedDict
 
 from dotenv import load_dotenv
-from flask import Flask, redirect, render_template, request, url_for
+from flask import Flask, make_response, redirect, render_template, request, url_for
 
 load_dotenv()
 
@@ -29,6 +30,13 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Cookie settings
+# ---------------------------------------------------------------------------
+
+_VOTED_COOKIE = "anketa_voted_gen"
+_COOKIE_MAX_AGE = 60 * 60 * 24 * 365  # 1 rok
 
 
 # ---------------------------------------------------------------------------
@@ -46,8 +54,12 @@ class VoteTally(TypedDict):
 class VoteStore:
     """Thread-safe persistent vote store backed by an atomic-write JSON file.
 
-    All public methods acquire a reentrant lock so the store is safe for use
-    under Gunicorn's threaded or gevent workers.
+    Vote integrity is enforced by a *generation* counter embedded in the JSON.
+    When the poll is reset the generation increments, which automatically
+    invalidates all existing voted-cookies without any server-side session.
+
+    Schema of the JSON file:
+        { "generation": <int>, "a": <int>, "b": <int>, ... }
     """
 
     def __init__(self, path: str | Path, choices: dict[str, str]) -> None:
@@ -60,8 +72,9 @@ class VoteStore:
     # Public API
     # ------------------------------------------------------------------
 
-    def cast(self, choice: str) -> None:
-        """Increment the vote counter for *choice*.
+    def cast(self, choice: str) -> int:
+        """Increment the vote counter for *choice* and return the
+        current generation so the caller can set an anti-double-vote cookie.
 
         Raises:
             KeyError: if *choice* is not a recognised option.
@@ -73,15 +86,25 @@ class VoteStore:
             votes = self._read()
             votes[choice] += 1
             self._write(votes)
+            generation = votes["generation"]
 
-        logger.info("Vote cast: %s (option total: %d)", choice, votes[choice])
+        logger.info(
+            "Vote cast: %s (option total: %d, generation: %d)",
+            choice, votes[choice], generation,
+        )
+        return generation
+
+    def current_generation(self) -> int:
+        """Return the current vote generation without modifying any data."""
+        with self._lock:
+            return self._read()["generation"]
 
     def tally(self) -> tuple[list[VoteTally], int]:
         """Return per-choice statistics and the grand total."""
         with self._lock:
             votes = self._read()
 
-        total = sum(votes.values())
+        total = sum(votes[k] for k in self._choices)
         stats: list[VoteTally] = [
             {
                 "key": key,
@@ -94,11 +117,18 @@ class VoteStore:
         return stats, total
 
     def reset(self) -> None:
-        """Zero out all vote counters."""
-        with self._lock:
-            self._write({key: 0 for key in self._choices})
+        """Zero out all vote counters and increment the generation.
 
-        logger.info("Vote store reset.")
+        Incrementing the generation automatically invalidates all existing
+        voted-cookies without requiring any additional state.
+        """
+        with self._lock:
+            votes = self._read()
+            new_votes = {key: 0 for key in self._choices}
+            new_votes["generation"] = votes["generation"] + 1
+            self._write(new_votes)
+
+        logger.info("Vote store reset (new generation: %d).", new_votes["generation"])
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -107,29 +137,28 @@ class VoteStore:
     def _ensure_file(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
         if not self._path.exists():
-            self._write({key: 0 for key in self._choices})
+            self._write(self._fresh_votes())
             logger.info("Initialised vote store at %s", self._path)
 
-    def _read(self) -> dict[str, int]:
+    def _fresh_votes(self, generation: int = 1) -> dict:
+        return {"generation": generation, **{key: 0 for key in self._choices}}
+
+    def _read(self) -> dict:
         """Deserialise votes from disk, re-initialising on corrupt data."""
         try:
-            data: dict[str, int] = json.loads(
-                self._path.read_text(encoding="utf-8")
-            )
+            data: dict = json.loads(self._path.read_text(encoding="utf-8"))
             for key in self._choices:
                 data.setdefault(key, 0)
+            data.setdefault("generation", 1)
             return data
         except (OSError, json.JSONDecodeError) as exc:
             logger.warning("Corrupt vote store (%s). Re-initialising.", exc)
-            fresh = {key: 0 for key in self._choices}
+            fresh = self._fresh_votes()
             self._write(fresh)
             return fresh
 
-    def _write(self, votes: dict[str, int]) -> None:
-        """Write votes atomically via a temp file + rename.
-
-        This prevents partial reads if the process is interrupted mid-write.
-        """
+    def _write(self, votes: dict) -> None:
+        """Write votes atomically via a temp file + rename."""
         tmp = self._path.with_suffix(".tmp")
         tmp.write_text(
             json.dumps(votes, ensure_ascii=False, indent=2),
@@ -160,11 +189,24 @@ def create_app() -> Flask:
         return response
 
     # ------------------------------------------------------------------
+    # Helpers
+    # ------------------------------------------------------------------
+
+    def _has_voted(generation: int) -> bool:
+        """Return True if the current request carries a valid voted cookie."""
+        return request.cookies.get(_VOTED_COOKIE) == str(generation)
+
+    # ------------------------------------------------------------------
     # Routes
     # ------------------------------------------------------------------
 
     @app.route("/")
     def index():
+        gen = store.current_generation()
+        if _has_voted(gen):
+            # User already voted – send to results with an info message.
+            return redirect(url_for("results", already_voted="1"))
+
         return render_template(
             "index.html",
             question=QUESTION,
@@ -177,17 +219,24 @@ def create_app() -> Flask:
         stats, total = store.tally()
 
         flash: dict[str, str] | None = None
-        match request.args.get("reset"):
-            case "ok":
-                flash = {
-                    "msg": "Hlasování bylo úspěšně resetováno.",
-                    "type": "success",
-                }
-            case "denied":
-                flash = {
-                    "msg": "Nesprávný token – reset nebyl proveden.",
-                    "type": "error",
-                }
+        reset_status = request.args.get("reset")
+        already_voted = request.args.get("already_voted")
+
+        if reset_status == "ok":
+            flash = {
+                "msg": "Hlasování bylo úspěšně resetováno.",
+                "type": "success",
+            }
+        elif reset_status == "denied":
+            flash = {
+                "msg": "Nesprávný token – reset nebyl proveden.",
+                "type": "error",
+            }
+        elif already_voted == "1":
+            flash = {
+                "msg": "Již jsi hlasoval/a. Níže jsou aktuální výsledky.",
+                "type": "info",
+            }
 
         return render_template(
             "index.html",
@@ -201,9 +250,16 @@ def create_app() -> Flask:
 
     @app.route("/vote", methods=["POST"])
     def vote():
+        gen = store.current_generation()
+
+        # Double-submit guard – cookie already present for this generation.
+        if _has_voted(gen):
+            logger.info("Duplicate vote blocked by cookie (generation %d).", gen)
+            return redirect(url_for("results", already_voted="1"))
+
         choice = request.form.get("choice", "").strip().lower()
         try:
-            store.cast(choice)
+            gen = store.cast(choice)
         except KeyError:
             logger.warning("Invalid vote choice: %r", choice)
             return (
@@ -216,17 +272,27 @@ def create_app() -> Flask:
                 ),
                 400,
             )
-        return redirect(url_for("results"))
+
+        response = make_response(redirect(url_for("results")))
+        response.set_cookie(
+            _VOTED_COOKIE,
+            str(gen),
+            max_age=_COOKIE_MAX_AGE,
+            httponly=True,
+            samesite="Lax",
+        )
+        return response
 
     @app.route("/reset", methods=["POST"])
     def reset():
         token = request.form.get("token", "")
-        # hmac.compare_digest prevents timing-oracle attacks on the token.
         if not hmac.compare_digest(token, RESET_TOKEN):
             logger.warning("Reset attempted with an invalid token.")
             return redirect(url_for("results", reset="denied"))
 
         store.reset()
+        # On reset the generation increments server-side – existing voted-cookies
+        # become stale automatically; no need to expire them manually.
         return redirect(url_for("results", reset="ok"))
 
     # ------------------------------------------------------------------
