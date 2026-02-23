@@ -1,7 +1,8 @@
 """Anketa – Záložkový průzkum
 
-Flask voting application with thread-safe persistent JSON storage
-and cookie-based one-vote-per-user enforcement.
+Flask voting application with thread-safe persistent JSON storage,
+cookie-based one-vote-per-user enforcement, and a session-protected
+admin panel for poll management.
 """
 
 from __future__ import annotations
@@ -15,11 +16,19 @@ from pathlib import Path
 from typing import TypedDict
 
 from dotenv import load_dotenv
-from flask import Flask, make_response, redirect, render_template, request, url_for
+from flask import (
+    Flask,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 
 load_dotenv()
 
-from config import CHOICES, DATA_FILE, QUESTION, RESET_TOKEN  # noqa: E402
+from config import CHOICES, DATA_FILE, QUESTION, RESET_TOKEN, SECRET_KEY  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -37,6 +46,7 @@ logger = logging.getLogger(__name__)
 
 _VOTED_COOKIE = "anketa_voted_gen"
 _COOKIE_MAX_AGE = 60 * 60 * 24 * 365  # 1 rok
+_ADMIN_SESSION_KEY = "is_admin"
 
 
 # ---------------------------------------------------------------------------
@@ -73,8 +83,8 @@ class VoteStore:
     # ------------------------------------------------------------------
 
     def cast(self, choice: str) -> int:
-        """Increment the vote counter for *choice* and return the
-        current generation so the caller can set an anti-double-vote cookie.
+        """Increment the vote counter for *choice* and return the current
+        generation so the caller can set an anti-double-vote cookie.
 
         Raises:
             KeyError: if *choice* is not a recognised option.
@@ -175,6 +185,7 @@ class VoteStore:
 def create_app() -> Flask:
     """Create and configure the Flask application."""
     app = Flask(__name__)
+    app.secret_key = SECRET_KEY
     store = VoteStore(DATA_FILE, CHOICES)
 
     # ------------------------------------------------------------------
@@ -196,15 +207,18 @@ def create_app() -> Flask:
         """Return True if the current request carries a valid voted cookie."""
         return request.cookies.get(_VOTED_COOKIE) == str(generation)
 
+    def _is_admin() -> bool:
+        """Return True if the current session is authenticated as admin."""
+        return session.get(_ADMIN_SESSION_KEY) is True
+
     # ------------------------------------------------------------------
-    # Routes
+    # Public routes
     # ------------------------------------------------------------------
 
     @app.route("/")
     def index():
         gen = store.current_generation()
         if _has_voted(gen):
-            # User already voted – send to results with an info message.
             return redirect(url_for("results", already_voted="1"))
 
         return render_template(
@@ -252,7 +266,6 @@ def create_app() -> Flask:
     def vote():
         gen = store.current_generation()
 
-        # Double-submit guard – cookie already present for this generation.
         if _has_voted(gen):
             logger.info("Duplicate vote blocked by cookie (generation %d).", gen)
             return redirect(url_for("results", already_voted="1"))
@@ -283,17 +296,55 @@ def create_app() -> Flask:
         )
         return response
 
-    @app.route("/reset", methods=["POST"])
-    def reset():
+    # ------------------------------------------------------------------
+    # Admin routes
+    # ------------------------------------------------------------------
+
+    @app.route("/admin")
+    def admin():
+        """Admin panel – shows login form or management panel based on session."""
+        stats, total = store.tally()
+        return render_template(
+            "admin.html",
+            is_admin=_is_admin(),
+            stats=stats,
+            total=total,
+        )
+
+    @app.route("/admin/login", methods=["POST"])
+    def admin_login():
+        """Validate the reset token and start an admin session."""
         token = request.form.get("token", "")
-        if not hmac.compare_digest(token, RESET_TOKEN):
-            logger.warning("Reset attempted with an invalid token.")
-            return redirect(url_for("results", reset="denied"))
+        if hmac.compare_digest(token, RESET_TOKEN):
+            session[_ADMIN_SESSION_KEY] = True
+            logger.info("Admin session started.")
+            return redirect(url_for("admin"))
+
+        logger.warning("Failed admin login attempt.")
+        return render_template(
+            "admin.html",
+            is_admin=False,
+            stats=None,
+            total=None,
+            flash={"msg": "Nesprávný token. Přístup odepřen.", "type": "error"},
+        ), 403
+
+    @app.route("/admin/reset", methods=["POST"])
+    def admin_reset():
+        """Reset all votes. Requires an active admin session."""
+        if not _is_admin():
+            logger.warning("Unauthorised reset attempt (no admin session).")
+            return redirect(url_for("admin"))
 
         store.reset()
-        # On reset the generation increments server-side – existing voted-cookies
-        # become stale automatically; no need to expire them manually.
-        return redirect(url_for("results", reset="ok"))
+        return redirect(url_for("admin", reset="ok"))
+
+    @app.route("/admin/logout", methods=["POST"])
+    def admin_logout():
+        """End the admin session."""
+        session.pop(_ADMIN_SESSION_KEY, None)
+        logger.info("Admin session ended.")
+        return redirect(url_for("index"))
 
     # ------------------------------------------------------------------
     # Error handlers

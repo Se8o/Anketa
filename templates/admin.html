@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="cs">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Anketa – administrace" />
+    <title>Admin – Anketa</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet" />
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d2e;
+            --surface-2: #252840;
+            --accent: #6c63ff;
+            --accent-2: #a78bfa;
+            --success: #22c55e;
+            --error: #f87171;
+            --text: #e2e8f0;
+            --text-muted: #94a3b8;
+            --border: #2d3149;
+            --radius-sm: 8px;
+            --radius-md: 14px;
+            --shadow-lg: 0 8px 32px rgba(0, 0, 0, .45);
+            --transition: 150ms ease;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem 4rem;
+        }
+
+        /* ── Header ──────────────────────────────────────────────────── */
+        .site-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+
+        .site-header__title {
+            font-size: clamp(1.2rem, 3vw, 1.6rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .site-header__subtitle {
+            color: var(--text-muted);
+            font-size: .85rem;
+            margin-top: .25rem;
+        }
+
+        /* ── Card ────────────────────────────────────────────────────── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 2rem 2.4rem;
+            width: 100%;
+            max-width: 520px;
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 1.5rem;
+        }
+
+        .card__title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 1.4rem;
+        }
+
+        /* ── Alert ───────────────────────────────────────────────────── */
+        [role="alert"] {
+            border-radius: var(--radius-sm);
+            padding: .75rem 1rem;
+            font-size: .9rem;
+            font-weight: 500;
+            margin-bottom: 1.2rem;
+        }
+
+        [role="alert"].alert--success {
+            background: rgba(34, 197, 94, .12);
+            border: 1px solid var(--success);
+            color: var(--success);
+        }
+
+        [role="alert"].alert--error {
+            background: rgba(248, 113, 113, .12);
+            border: 1px solid var(--error);
+            color: var(--error);
+        }
+
+        /* ── Form fields ─────────────────────────────────────────────── */
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: .45rem;
+            margin-bottom: 1.2rem;
+        }
+
+        .field label {
+            font-size: .85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .field input[type="password"] {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text);
+            font-family: inherit;
+            font-size: .95rem;
+            padding: .65rem .9rem;
+            outline: none;
+            transition: border-color var(--transition);
+            width: 100%;
+        }
+
+        .field input[type="password"]:focus {
+            border-color: var(--accent);
+        }
+
+        /* ── Buttons ─────────────────────────────────────────────────── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            padding: .7rem 1.5rem;
+            border-radius: var(--radius-sm);
+            font-family: inherit;
+            font-size: .95rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            border: none;
+            transition: opacity var(--transition), transform var(--transition);
+        }
+
+        .btn:hover {
+            opacity: .88;
+        }
+
+        .btn:active {
+            transform: scale(.97);
+        }
+
+        .btn--primary {
+            background: var(--accent);
+            color: #fff;
+        }
+
+        .btn--secondary {
+            background: var(--surface-2);
+            color: var(--accent-2);
+            border: 1px solid var(--border);
+        }
+
+        .btn--danger {
+            background: rgba(248, 113, 113, .15);
+            color: var(--error);
+            border: 1px solid var(--error);
+        }
+
+        .btn-row {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        /* ── Stats summary ───────────────────────────────────────────── */
+        .stats-section {
+            margin-top: 1.5rem;
+        }
+
+        .stats-section h3 {
+            font-size: .85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin-bottom: .8rem;
+        }
+
+        .stats-list {
+            display: flex;
+            flex-direction: column;
+            gap: .5rem;
+            list-style: none;
+        }
+
+        .stats-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: .88rem;
+            padding: .4rem .6rem;
+            background: var(--surface-2);
+            border-radius: var(--radius-sm);
+        }
+
+        .stats-item__label {
+            color: var(--text-muted);
+        }
+
+        .stats-item__count {
+            font-weight: 700;
+            color: var(--accent-2);
+        }
+
+        .total-line {
+            margin-top: .8rem;
+            font-size: .85rem;
+            color: var(--text-muted);
+        }
+
+        /* ── Danger zone ─────────────────────────────────────────────── */
+        .danger-zone {
+            border: 1px solid rgba(248, 113, 113, .25);
+            border-radius: var(--radius-md);
+            padding: 1.4rem 1.6rem;
+            margin-top: 1.5rem;
+        }
+
+        .danger-zone__title {
+            font-size: .85rem;
+            font-weight: 700;
+            color: var(--error);
+            text-transform: uppercase;
+            letter-spacing: .06em;
+            margin-bottom: .6rem;
+        }
+
+        .danger-zone__desc {
+            font-size: .85rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            line-height: 1.5;
+        }
+
+        /* ── Responsive ──────────────────────────────────────────────── */
+        @media (max-width: 480px) {
+            .card {
+                padding: 1.4rem 1.2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="site-header" role="banner">
+        <h1 class="site-header__title">Anketa – Admin panel</h1>
+        <p class="site-header__subtitle">
+            <a href="/" style="color: var(--text-muted); text-decoration: none;">Zpet na anketu</a>
+        </p>
+    </header>
+
+    <main>
+
+        {% if not is_admin %}
+        {# ── Přihlašovací formulář ────────────────────────────────────── #}
+        <section class="card" aria-labelledby="login-heading">
+            <h2 id="login-heading" class="card__title">Prihlaseni</h2>
+
+            {% if flash %}
+            <div role="alert" class="alert--{{ flash.type }}">{{ flash.msg }}</div>
+            {% endif %}
+
+            <form method="POST" action="/admin/login" novalidate>
+                <div class="field">
+                    <label for="admin-token">Admin token</label>
+                    <input id="admin-token" type="password" name="token" placeholder="Zadej spravny token..."
+                        autocomplete="current-password" required />
+                </div>
+                <button id="btn-login" type="submit" class="btn btn--primary">
+                    Prihlasit se
+                </button>
+            </form>
+        </section>
+
+        {% else %}
+        {# ── Admin panel ──────────────────────────────────────────────── #}
+        <section class="card" aria-labelledby="admin-heading">
+            <h2 id="admin-heading" class="card__title">Sprava ankety</h2>
+
+            {% if request.args.get('reset') == 'ok' %}
+            <div role="alert" class="alert--success">Hlasovani bylo uspesne resetovano.</div>
+            {% endif %}
+
+            <div class="stats-section">
+                <h3>Aktualni vysledky</h3>
+                <ul class="stats-list">
+                    {% for s in stats %}
+                    <li class="stats-item">
+                        <span class="stats-item__label">{{ s.key }}) {{ s.label }}</span>
+                        <span class="stats-item__count">{{ s.count }} hlasu ({{ s.percent }} %)</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                <p class="total-line">Celkem: <strong>{{ total }}</strong> hlasu</p>
+            </div>
+
+            <div class="danger-zone" role="region" aria-label="Nebezpecna zona">
+                <p class="danger-zone__title">Reset hlasovani</p>
+                <p class="danger-zone__desc">
+                    Vsechny hlasy budou vynulovany a vsichni uzivatele budou moci hlasovat znovu.
+                    Tato akce je nevratna.
+                </p>
+                <form method="POST" action="/admin/reset">
+                    <button id="btn-reset" type="submit" class="btn btn--danger">
+                        Resetovat vsechna hlasovani
+                    </button>
+                </form>
+            </div>
+
+            <div class="btn-row" style="margin-top: 1.5rem;">
+                <a id="btn-results" href="/results" class="btn btn--secondary">
+                    Zobrazit vysledky
+                </a>
+                <form method="POST" action="/admin/logout" style="display: contents;">
+                    <button id="btn-logout" type="submit" class="btn btn--secondary">
+                        Odhlasit se
+                    </button>
+                </form>
+            </div>
+        </section>
+        {% endif %}
+
+    </main>
+
+</body>
+
+</html>

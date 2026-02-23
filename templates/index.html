@@ -312,65 +312,6 @@
       font-weight: 600;
     }
 
-    /* ── Reset (collapsible) ─────────────────────────────────────── */
-    .reset-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      width: 100%;
-      max-width: 640px;
-      box-shadow: var(--shadow-lg);
-      overflow: hidden;
-    }
-
-    .reset-card summary {
-      padding: .85rem 1.4rem;
-      cursor: pointer;
-      font-size: .9rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      list-style: none;
-      display: flex;
-      align-items: center;
-      gap: .5rem;
-      transition: color var(--transition);
-      user-select: none;
-    }
-
-    .reset-card summary::-webkit-details-marker {
-      display: none;
-    }
-
-    .reset-card summary:hover {
-      color: var(--error);
-    }
-
-    .reset-card__body {
-      padding: 1rem 1.4rem 1.2rem;
-      border-top: 1px solid var(--border);
-      display: flex;
-      gap: .75rem;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .reset-card__input {
-      flex: 1;
-      min-width: 180px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--text);
-      font-family: inherit;
-      font-size: .9rem;
-      padding: .6rem .9rem;
-      outline: none;
-      transition: border-color var(--transition);
-    }
-
-    .reset-card__input:focus {
-      border-color: var(--accent);
-    }
 
     /* ── Responsive ──────────────────────────────────────────────── */
     @media (max-width: 480px) {
@@ -467,19 +408,11 @@
       </div>
     </section>
 
-    <details class="reset-card">
-      <summary id="reset-section">Resetovat hlasování</summary>
-      <div class="reset-card__body">
-        <form method="POST" action="/reset" style="display: contents;">
-          <label for="reset-token" class="visually-hidden">Reset token</label>
-          <input id="reset-token" class="reset-card__input" type="password" name="token"
-            placeholder="Zadej reset token…" autocomplete="off" required />
-          <button id="btn-reset" type="submit" class="btn btn--danger">
-            Resetovat
-          </button>
-        </form>
-      </div>
-    </details>
+    <p style="margin-top: 1.2rem; text-align: center;">
+      <a id="link-admin" href="/admin"
+        style="font-size: .78rem; color: var(--border); text-decoration: none; transition: color 150ms;"
+        onmouseover="this.style.color='var(--text-muted)'" onmouseout="this.style.color='var(--border)'">admin</a>
+    </p>
     {% endif %}
 
   </main>

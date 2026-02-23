@@ -15,6 +15,8 @@ from dataclasses import dataclass, field
 class AppConfig:
     """Immutable application configuration loaded once at import time."""
 
+    secret_key: str
+
     reset_token: str
     data_file: str
     question: str
@@ -35,6 +37,7 @@ class AppConfig:
 _RESET_TOKEN_PLACEHOLDER = "zmenit_pred_deploymentem"
 
 config = AppConfig(
+    secret_key=os.environ.get("SECRET_KEY", "dev-secret-change-in-production"),
     reset_token=os.environ.get("RESET_TOKEN", _RESET_TOKEN_PLACEHOLDER),
     data_file=os.environ.get("DATA_FILE", "data/votes.json"),
     question="Kolik otevřených záložek je ještě normální?",
@@ -47,6 +50,7 @@ config = AppConfig(
 )
 
 # Flat exports kept for backward-compatibility with app.py imports.
+SECRET_KEY: str = config.secret_key
 RESET_TOKEN: str = config.reset_token
 DATA_FILE: str = config.data_file
 QUESTION: str = config.question
