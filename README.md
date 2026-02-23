@@ -2,6 +2,8 @@
 
 Jednoduchá hlasovací webová aplikace napsaná v Pythonu s Flaskem. Uživatel odpovídá na otázku, výsledky se ukládají na server a jsou sdílené mezi všemi návštěvníky. Hlasování lze resetovat pomocí tokenu.
 
+**Stránku je možné navštívít na této adrese:** https://anketa-e1jd.onrender.com
+
 ## Jak to funguje
 
 Aplikace má jeden HTML soubor (Jinja2 šablona), který se renderuje ve dvou stavech – formulář pro hlasování a stránka s výsledky. Flask na serveru obsluhuje čtyři URL adresy, ukládá hlasy do JSON souboru a odpovídá hotovým HTML.
