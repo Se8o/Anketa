@@ -1,177 +1,256 @@
-"""
-Anketa – Záložkový průzkum
-Flask backend: hlasování, výsledky, reset s tokenem.
+"""Anketa – Záložkový průzkum
+
+Flask voting application with thread-safe persistent JSON storage.
 """
 
+from __future__ import annotations
+
+import hmac
 import json
 import logging
 import os
+import threading
 from pathlib import Path
+from typing import TypedDict
 
 from dotenv import load_dotenv
 from flask import Flask, redirect, render_template, request, url_for
 
-load_dotenv()  # načte .env lokálně; na Render.com jsou proměnné v dashboardu
+load_dotenv()
 
-from config import CHOICES, DATA_FILE, QUESTION, RESET_TOKEN
+from config import CHOICES, DATA_FILE, QUESTION, RESET_TOKEN  # noqa: E402
 
 # ---------------------------------------------------------------------------
 # Logging
 # ---------------------------------------------------------------------------
+
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
+    format="%(asctime)s [%(levelname)s] %(name)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Flask app
-# ---------------------------------------------------------------------------
-app = Flask(__name__)
-
 
 # ---------------------------------------------------------------------------
-# Pomocné funkce pro práci s daty
+# Data layer
 # ---------------------------------------------------------------------------
 
-def _ensure_data_file() -> None:
-    """Vytvoří data/votes.json pokud neexistuje."""
-    path = Path(DATA_FILE)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if not path.exists():
-        _write_votes({key: 0 for key in CHOICES})
-        logger.info("Vytvořen nový soubor s hlasy: %s", DATA_FILE)
+
+class VoteTally(TypedDict):
+    key: str
+    label: str
+    count: int
+    percent: int
 
 
-def _read_votes() -> dict:
-    """Načte hlasy ze souboru. Vrátí prázdný slovník při chybě."""
-    try:
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        # Zajisti, že každá volba existuje
-        for key in CHOICES:
-            data.setdefault(key, 0)
-        return data
-    except (FileNotFoundError, json.JSONDecodeError) as exc:
-        logger.warning("Nelze načíst hlasy (%s), inicializuji nové.", exc)
-        votes = {key: 0 for key in CHOICES}
-        _write_votes(votes)
-        return votes
+class VoteStore:
+    """Thread-safe persistent vote store backed by an atomic-write JSON file.
 
-
-def _write_votes(votes: dict) -> None:
-    """Zapíše hlasy do souboru."""
-    Path(DATA_FILE).parent.mkdir(parents=True, exist_ok=True)
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(votes, f, ensure_ascii=False, indent=2)
-
-
-def _compute_stats(votes: dict) -> list[dict]:
+    All public methods acquire a reentrant lock so the store is safe for use
+    under Gunicorn's threaded or gevent workers.
     """
-    Vrátí seznam diktů pro každou možnost:
-    { key, label, count, percent, bar_width }
-    """
-    total = sum(votes.values())
-    stats = []
-    for key, label in CHOICES.items():
-        count = votes.get(key, 0)
-        percent = round(count / total * 100) if total > 0 else 0
-        stats.append(
+
+    def __init__(self, path: str | Path, choices: dict[str, str]) -> None:
+        self._path = Path(path)
+        self._choices = choices
+        self._lock = threading.Lock()
+        self._ensure_file()
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def cast(self, choice: str) -> None:
+        """Increment the vote counter for *choice*.
+
+        Raises:
+            KeyError: if *choice* is not a recognised option.
+        """
+        if choice not in self._choices:
+            raise KeyError(f"Unknown choice: {choice!r}")
+
+        with self._lock:
+            votes = self._read()
+            votes[choice] += 1
+            self._write(votes)
+
+        logger.info("Vote cast: %s (option total: %d)", choice, votes[choice])
+
+    def tally(self) -> tuple[list[VoteTally], int]:
+        """Return per-choice statistics and the grand total."""
+        with self._lock:
+            votes = self._read()
+
+        total = sum(votes.values())
+        stats: list[VoteTally] = [
             {
                 "key": key,
                 "label": label,
-                "count": count,
-                "percent": percent,
+                "count": (count := votes.get(key, 0)),
+                "percent": round(count / total * 100) if total else 0,
             }
+            for key, label in self._choices.items()
+        ]
+        return stats, total
+
+    def reset(self) -> None:
+        """Zero out all vote counters."""
+        with self._lock:
+            self._write({key: 0 for key in self._choices})
+
+        logger.info("Vote store reset.")
+
+    # ------------------------------------------------------------------
+    # Private helpers
+    # ------------------------------------------------------------------
+
+    def _ensure_file(self) -> None:
+        self._path.parent.mkdir(parents=True, exist_ok=True)
+        if not self._path.exists():
+            self._write({key: 0 for key in self._choices})
+            logger.info("Initialised vote store at %s", self._path)
+
+    def _read(self) -> dict[str, int]:
+        """Deserialise votes from disk, re-initialising on corrupt data."""
+        try:
+            data: dict[str, int] = json.loads(
+                self._path.read_text(encoding="utf-8")
+            )
+            for key in self._choices:
+                data.setdefault(key, 0)
+            return data
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("Corrupt vote store (%s). Re-initialising.", exc)
+            fresh = {key: 0 for key in self._choices}
+            self._write(fresh)
+            return fresh
+
+    def _write(self, votes: dict[str, int]) -> None:
+        """Write votes atomically via a temp file + rename.
+
+        This prevents partial reads if the process is interrupted mid-write.
+        """
+        tmp = self._path.with_suffix(".tmp")
+        tmp.write_text(
+            json.dumps(votes, ensure_ascii=False, indent=2),
+            encoding="utf-8",
         )
-    return stats, total
+        tmp.replace(self._path)
 
 
 # ---------------------------------------------------------------------------
-# Routes
+# Application factory
 # ---------------------------------------------------------------------------
 
-@app.route("/")
-def index():
-    """Hlavní stránka s formulářem pro hlasování."""
-    _ensure_data_file()
-    return render_template("index.html", question=QUESTION, choices=CHOICES, view="vote")
 
+def create_app() -> Flask:
+    """Create and configure the Flask application."""
+    app = Flask(__name__)
+    store = VoteStore(DATA_FILE, CHOICES)
 
-@app.route("/results")
-def results():
-    """Zobrazí výsledky bez hlasování."""
-    _ensure_data_file()
-    votes = _read_votes()
-    stats, total = _compute_stats(votes)
+    # ------------------------------------------------------------------
+    # Security headers
+    # ------------------------------------------------------------------
 
-    # Zpráva po resetu předaná query parametrem
-    reset_status = request.args.get("reset")
-    flash_msg = None
-    flash_type = None
-    if reset_status == "ok":
-        flash_msg = "✓ Hlasování bylo úspěšně resetováno."
-        flash_type = "success"
-    elif reset_status == "denied":
-        flash_msg = "✗ Nesprávný token – reset nebyl proveden."
-        flash_type = "error"
+    @app.after_request
+    def add_security_headers(response):
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        return response
 
-    return render_template(
-        "index.html",
-        question=QUESTION,
-        choices=CHOICES,
-        view="results",
-        stats=stats,
-        total=total,
-        flash_msg=flash_msg,
-        flash_type=flash_type,
-    )
+    # ------------------------------------------------------------------
+    # Routes
+    # ------------------------------------------------------------------
 
-
-@app.route("/vote", methods=["POST"])
-def vote():
-    """Uloží hlas a přesměruje na výsledky."""
-    choice = request.form.get("choice", "").strip().lower()
-
-    if choice not in CHOICES:
-        logger.warning("Neplatná volba: %r", choice)
+    @app.route("/")
+    def index():
         return render_template(
             "index.html",
             question=QUESTION,
             choices=CHOICES,
             view="vote",
-            flash_msg="✗ Vyber prosím platnou možnost.",
-            flash_type="error",
-        ), 400
+        )
 
-    votes = _read_votes()
-    votes[choice] += 1
-    _write_votes(votes)
-    logger.info("Hlas uložen: %s (celkem %s)", choice, votes[choice])
+    @app.route("/results")
+    def results():
+        stats, total = store.tally()
 
-    return redirect(url_for("results"))
+        flash: dict[str, str] | None = None
+        match request.args.get("reset"):
+            case "ok":
+                flash = {
+                    "msg": "Hlasování bylo úspěšně resetováno.",
+                    "type": "success",
+                }
+            case "denied":
+                flash = {
+                    "msg": "Nesprávný token – reset nebyl proveden.",
+                    "type": "error",
+                }
 
+        return render_template(
+            "index.html",
+            question=QUESTION,
+            choices=CHOICES,
+            view="results",
+            stats=stats,
+            total=total,
+            flash=flash,
+        )
 
-@app.route("/reset", methods=["POST"])
-def reset():
-    """Resetuje všechny hlasy. Vyžaduje správný token."""
-    token = request.form.get("token", "")
+    @app.route("/vote", methods=["POST"])
+    def vote():
+        choice = request.form.get("choice", "").strip().lower()
+        try:
+            store.cast(choice)
+        except KeyError:
+            logger.warning("Invalid vote choice: %r", choice)
+            return (
+                render_template(
+                    "index.html",
+                    question=QUESTION,
+                    choices=CHOICES,
+                    view="vote",
+                    flash={"msg": "Vyber prosím platnou možnost.", "type": "error"},
+                ),
+                400,
+            )
+        return redirect(url_for("results"))
 
-    if token != RESET_TOKEN:
-        logger.warning("Nesprávný reset token.")
-        return redirect(url_for("results", reset="denied"))
+    @app.route("/reset", methods=["POST"])
+    def reset():
+        token = request.form.get("token", "")
+        # hmac.compare_digest prevents timing-oracle attacks on the token.
+        if not hmac.compare_digest(token, RESET_TOKEN):
+            logger.warning("Reset attempted with an invalid token.")
+            return redirect(url_for("results", reset="denied"))
 
-    votes = {key: 0 for key in CHOICES}
-    _write_votes(votes)
-    logger.info("Hlasování bylo resetováno.")
-    return redirect(url_for("results", reset="ok"))
+        store.reset()
+        return redirect(url_for("results", reset="ok"))
+
+    # ------------------------------------------------------------------
+    # Error handlers
+    # ------------------------------------------------------------------
+
+    @app.errorhandler(404)
+    def not_found(exc):
+        return render_template("error.html", code=404, message="Stránka nenalezena."), 404
+
+    @app.errorhandler(500)
+    def server_error(exc):
+        logger.exception("Unhandled server error")
+        return render_template("error.html", code=500, message="Interní chyba serveru."), 500
+
+    return app
 
 
 # ---------------------------------------------------------------------------
-# Spuštění (lokálně)
+# Module-level app instance (Gunicorn entry point: gunicorn app:app)
 # ---------------------------------------------------------------------------
+
+app = create_app()
 
 if __name__ == "__main__":
-    _ensure_data_file()
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(host="0.0.0.0", port=port, debug=False)

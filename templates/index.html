@@ -10,7 +10,25 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
-    /* ── Reset & base ─────────────────────────────────────────── */
+    /* ── Design tokens ───────────────────────────────────────────── */
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d2e;
+      --surface-2: #252840;
+      --accent: #6c63ff;
+      --accent-2: #a78bfa;
+      --success: #22c55e;
+      --error: #f87171;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --border: #2d3149;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --shadow-lg: 0 8px 32px rgba(0, 0, 0, .45);
+      --transition: 150ms ease;
+    }
+
+    /* ── Reset ───────────────────────────────────────────────────── */
     *,
     *::before,
     *::after {
@@ -19,28 +37,14 @@
       padding: 0;
     }
 
-    :root {
-      --bg: #0f1117;
-      --surface: #1a1d2e;
-      --surface2: #252840;
-      --accent: #6c63ff;
-      --accent2: #a78bfa;
-      --success: #22c55e;
-      --error: #f87171;
-      --text: #e2e8f0;
-      --muted: #94a3b8;
-      --border: #2d3149;
-      --radius: 14px;
-      --shadow: 0 8px 32px rgba(0, 0, 0, .45);
-    }
-
+    /* ── Base ────────────────────────────────────────────────────── */
     html {
       scroll-behavior: smooth;
     }
 
     body {
       font-family: 'Inter', system-ui, sans-serif;
-      background: var(--bg);
+      background-color: var(--bg);
       color: var(--text);
       min-height: 100vh;
       display: flex;
@@ -49,142 +53,147 @@
       padding: 2rem 1rem 4rem;
     }
 
-    /* ── Header ───────────────────────────────────────────────── */
-    header {
+    /* ── Skip link (accessibility) ───────────────────────────────── */
+    .skip-link {
+      position: absolute;
+      top: -100%;
+      left: 1rem;
+      background: var(--accent);
+      color: #fff;
+      padding: .5rem 1rem;
+      border-radius: var(--radius-sm);
+      font-weight: 600;
+      text-decoration: none;
+      z-index: 100;
+    }
+
+    .skip-link:focus {
+      top: 1rem;
+    }
+
+    /* ── Header ──────────────────────────────────────────────────── */
+    .site-header {
       text-align: center;
       margin-bottom: 2.5rem;
     }
 
-    header .emoji {
-      font-size: 2.8rem;
-      display: block;
-      margin-bottom: .4rem;
-    }
-
-    header h1 {
+    .site-header__title {
       font-size: clamp(1.4rem, 4vw, 2rem);
       font-weight: 800;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
 
-    header p.subtitle {
-      color: var(--muted);
+    .site-header__subtitle {
+      color: var(--text-muted);
       font-size: .9rem;
       margin-top: .3rem;
     }
 
-    /* ── Card ─────────────────────────────────────────────────── */
+    /* ── Card ────────────────────────────────────────────────────── */
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: var(--radius);
+      border-radius: var(--radius-md);
       padding: 2rem 2.4rem;
       width: 100%;
       max-width: 640px;
-      box-shadow: var(--shadow);
+      box-shadow: var(--shadow-lg);
       margin-bottom: 1.5rem;
     }
 
-    .card h2 {
+    .card__question {
       font-size: 1.15rem;
       font-weight: 700;
-      margin-bottom: 1.5rem;
       line-height: 1.45;
       color: var(--text);
+      margin-bottom: 1.5rem;
     }
 
-    /* ── Flash messages ───────────────────────────────────────── */
-    .flash {
-      border-radius: 8px;
+    /* ── Alert / Flash ───────────────────────────────────────────── */
+    [role="alert"] {
+      border-radius: var(--radius-sm);
       padding: .75rem 1rem;
       font-size: .9rem;
       font-weight: 500;
       margin-bottom: 1.2rem;
-      display: flex;
-      align-items: center;
-      gap: .5rem;
     }
 
-    .flash.success {
+    [role="alert"].alert--success {
       background: rgba(34, 197, 94, .12);
       border: 1px solid var(--success);
       color: var(--success);
     }
 
-    .flash.error {
+    [role="alert"].alert--error {
       background: rgba(248, 113, 113, .12);
       border: 1px solid var(--error);
       color: var(--error);
     }
 
-    /* ── Radio options ────────────────────────────────────────── */
+    /* ── Vote options ────────────────────────────────────────────── */
     .options {
       display: flex;
       flex-direction: column;
       gap: .75rem;
+      list-style: none;
     }
 
-    .option-label {
+    .option__label {
       display: flex;
       align-items: center;
       gap: .9rem;
       padding: .85rem 1.1rem;
       border: 2px solid var(--border);
-      border-radius: 10px;
+      border-radius: var(--radius-sm);
       cursor: pointer;
-      transition: border-color .18s, background .18s;
-      user-select: none;
+      transition: border-color var(--transition), background var(--transition);
     }
 
-    .option-label:hover {
+    .option__label:hover {
       border-color: var(--accent);
       background: rgba(108, 99, 255, .08);
     }
 
-    .option-label input[type="radio"] {
+    /* CSS-only selected state – :has() is baseline 2023 */
+    .option__label:has(input:checked) {
+      border-color: var(--accent);
+      background: rgba(108, 99, 255, .1);
+    }
+
+    .option__radio {
       display: none;
     }
 
-    .option-label input[type="radio"]:checked+.option-key {
-      background: var(--accent);
-      color: #fff;
-    }
-
-    .option-label input[type="radio"]:checked~.option-text {
-      color: var(--text);
-    }
-
-    .option-key {
+    .option__key {
       flex-shrink: 0;
       width: 2rem;
       height: 2rem;
       border-radius: 50%;
-      background: var(--surface2);
+      background: var(--surface-2);
       display: flex;
       align-items: center;
       justify-content: center;
       font-weight: 700;
       font-size: .8rem;
       text-transform: uppercase;
-      transition: background .18s, color .18s;
-      color: var(--accent2);
+      color: var(--accent-2);
+      transition: background var(--transition), color var(--transition);
     }
 
-    .option-text {
+    .option__label:has(input:checked) .option__key {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .option__text {
       font-size: .95rem;
-      color: var(--muted);
+      color: var(--text-muted);
     }
 
-    /* Selected state (CSS-only, no JS) */
-    .option-label:has(input:checked) {
-      border-color: var(--accent);
-      background: rgba(108, 99, 255, .1);
-    }
-
-    /* ── Buttons ──────────────────────────────────────────────── */
+    /* ── Button row ──────────────────────────────────────────────── */
     .btn-row {
       display: flex;
       align-items: center;
@@ -193,18 +202,20 @@
       flex-wrap: wrap;
     }
 
+    /* ── Buttons ─────────────────────────────────────────────────── */
     .btn {
       display: inline-flex;
       align-items: center;
       gap: .45rem;
       padding: .7rem 1.5rem;
-      border-radius: 8px;
+      border-radius: var(--radius-sm);
+      font-family: inherit;
       font-size: .95rem;
       font-weight: 600;
       cursor: pointer;
       text-decoration: none;
       border: none;
-      transition: opacity .15s, transform .1s;
+      transition: opacity var(--transition), transform var(--transition);
     }
 
     .btn:hover {
@@ -215,24 +226,37 @@
       transform: scale(.97);
     }
 
-    .btn-primary {
+    .btn--primary {
       background: var(--accent);
       color: #fff;
     }
 
-    .btn-secondary {
-      background: var(--surface2);
-      color: var(--accent2);
+    .btn--secondary {
+      background: var(--surface-2);
+      color: var(--accent-2);
       border: 1px solid var(--border);
     }
 
-    .btn-danger {
+    .btn--danger {
       background: rgba(248, 113, 113, .15);
       color: var(--error);
       border: 1px solid var(--error);
     }
 
-    /* ── Results bars ─────────────────────────────────────────── */
+    /* ── Results ─────────────────────────────────────────────────── */
+    .total-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+      padding: .3rem .9rem;
+      font-size: .82rem;
+      color: var(--text-muted);
+      margin-bottom: 1.4rem;
+    }
+
     .results-list {
       display: flex;
       flex-direction: column;
@@ -245,86 +269,78 @@
       gap: .3rem;
     }
 
-    .result-meta {
+    .result-item__meta {
       display: flex;
       justify-content: space-between;
       align-items: baseline;
       font-size: .88rem;
     }
 
-    .result-label {
+    .result-item__label {
       color: var(--text);
       font-weight: 500;
     }
 
-    .result-count {
-      color: var(--muted);
+    .result-item__count {
+      color: var(--text-muted);
       font-size: .82rem;
     }
 
-    .bar-track {
+    .result-item__track {
       height: 10px;
-      background: var(--surface2);
+      background: var(--surface-2);
       border-radius: 99px;
       overflow: hidden;
     }
 
-    .bar-fill {
+    .result-item__fill {
       height: 100%;
       border-radius: 99px;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
       transition: width .6s cubic-bezier(.4, 0, .2, 1);
     }
 
-    .result-percent {
+    .result-item__percent {
       font-size: .82rem;
-      color: var(--accent2);
+      color: var(--accent-2);
       font-weight: 600;
     }
 
-    .total-badge {
-      display: inline-flex;
-      align-items: center;
-      gap: .35rem;
-      background: var(--surface2);
+    /* ── Reset (collapsible) ─────────────────────────────────────── */
+    .reset-card {
+      background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 99px;
-      padding: .3rem .9rem;
-      font-size: .82rem;
-      color: var(--muted);
-      margin-bottom: 1.2rem;
-    }
-
-    /* ── Reset section ────────────────────────────────────────── */
-    details {
-      border: 1px solid var(--border);
-      border-radius: 10px;
+      border-radius: var(--radius-md);
+      width: 100%;
+      max-width: 640px;
+      box-shadow: var(--shadow-lg);
       overflow: hidden;
     }
 
-    summary {
-      padding: .85rem 1.1rem;
+    .reset-card summary {
+      padding: .85rem 1.4rem;
       cursor: pointer;
       font-size: .9rem;
       font-weight: 600;
-      color: var(--muted);
+      color: var(--text-muted);
       list-style: none;
       display: flex;
       align-items: center;
       gap: .5rem;
-      transition: color .15s;
+      transition: color var(--transition);
+      user-select: none;
     }
 
-    summary:hover {
-      color: var(--error);
-    }
-
-    summary::-webkit-details-marker {
+    .reset-card summary::-webkit-details-marker {
       display: none;
     }
 
-    .reset-body {
-      padding: 1rem 1.1rem;
+    .reset-card summary:hover {
+      color: var(--error);
+    }
+
+    .reset-card__body {
+      padding: 1rem 1.4rem 1.2rem;
       border-top: 1px solid var(--border);
       display: flex;
       gap: .75rem;
@@ -332,40 +348,25 @@
       flex-wrap: wrap;
     }
 
-    .reset-body input[type="password"] {
+    .reset-card__input {
       flex: 1;
       min-width: 180px;
       background: var(--bg);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: var(--radius-sm);
       color: var(--text);
       font-family: inherit;
       font-size: .9rem;
       padding: .6rem .9rem;
       outline: none;
-      transition: border-color .15s;
+      transition: border-color var(--transition);
     }
 
-    .reset-body input[type="password"]:focus {
+    .reset-card__input:focus {
       border-color: var(--accent);
     }
 
-    /* ── Nav links ────────────────────────────────────────────── */
-    .nav-link {
-      font-size: .85rem;
-      color: var(--muted);
-      text-decoration: none;
-      display: inline-flex;
-      align-items: center;
-      gap: .3rem;
-      transition: color .15s;
-    }
-
-    .nav-link:hover {
-      color: var(--accent2);
-    }
-
-    /* ── Responsive ───────────────────────────────────────────── */
+    /* ── Responsive ──────────────────────────────────────────────── */
     @media (max-width: 480px) {
       .card {
         padding: 1.4rem 1.2rem;
@@ -376,96 +377,106 @@
 
 <body>
 
-  <header>
-    <h1>Anketa – Záložkový průzkum</h1>
-    <p class="subtitle">Jednoduchá anketa pro výuku webových aplikací</p>
+  <a class="skip-link" href="#main-content">Přeskočit na obsah</a>
+
+  <header class="site-header" role="banner">
+    <h1 class="site-header__title">Anketa – Záložkový průzkum</h1>
+    <p class="site-header__subtitle">Jednoduchá anketa pro výuku webových aplikací</p>
   </header>
 
-  <!-- ── HLASOVÁNÍ ──────────────────────────────────────────────── -->
-  {% if view == "vote" %}
-  <div class="card">
-    <h2>{{ question }}</h2>
+  <main id="main-content">
 
-    {% if flash_msg %}
-    <div class="flash {{ flash_type }}">{{ flash_msg }}</div>
+    {# ── VOTING FORM ─────────────────────────────────────────────── #}
+    {% if view == "vote" %}
+    <section class="card" aria-labelledby="poll-heading">
+      <h2 id="poll-heading" class="card__question">{{ question }}</h2>
+
+      {% if flash %}
+      <div role="alert" class="alert--{{ flash.type }}">{{ flash.msg }}</div>
+      {% endif %}
+
+      <form method="POST" action="/vote" novalidate>
+        <ul class="options" role="radiogroup" aria-labelledby="poll-heading">
+          {% for key, label in choices.items() %}
+          <li>
+            <label class="option__label" for="choice_{{ key }}">
+              <input class="option__radio" type="radio" id="choice_{{ key }}" name="choice" value="{{ key }}"
+                required />
+              <span class="option__key" aria-hidden="true">{{ key }}</span>
+              <span class="option__text">{{ label }}</span>
+            </label>
+          </li>
+          {% endfor %}
+        </ul>
+
+        <div class="btn-row">
+          <button id="btn-vote" type="submit" class="btn btn--primary">
+            Hlasovat
+          </button>
+          <a id="link-results" href="/results" class="btn btn--secondary">
+            Jen zobrazit výsledky
+          </a>
+        </div>
+      </form>
+    </section>
     {% endif %}
 
-    <form method="POST" action="/vote">
-      <div class="options">
-        {% for key, label in choices.items() %}
-        <label class="option-label" for="choice_{{ key }}">
-          <input type="radio" id="choice_{{ key }}" name="choice" value="{{ key }}" required />
-          <span class="option-key">{{ key }}</span>
-          <span class="option-text">{{ label }}</span>
-        </label>
-        {% endfor %}
-      </div>
+    {# ── RESULTS ─────────────────────────────────────────────────── #}
+    {% if view == "results" %}
+    <section class="card" aria-labelledby="results-heading">
+      <h2 id="results-heading" class="card__question">{{ question }}</h2>
 
-      <div class="btn-row">
-        <button id="btn-vote" type="submit" class="btn btn-primary">
-          Hlasovat
-        </button>
-        <a id="link-results" href="/results" class="btn btn-secondary">
-          Jen zobrazit výsledky
+      {% if flash %}
+      <div role="alert" class="alert--{{ flash.type }}">{{ flash.msg }}</div>
+      {% endif %}
+
+      <p class="total-badge" aria-label="Celkový počet hlasů: {{ total }}">
+        Celkem hlasů: <strong>{{ total }}</strong>
+      </p>
+
+      <ol class="results-list" aria-label="Výsledky ankety">
+        {% for s in stats %}
+        <li class="result-item">
+          <div class="result-item__meta">
+            <span class="result-item__label">
+              <strong>{{ s.key }})</strong> {{ s.label }}
+            </span>
+            <span class="result-item__count" aria-label="{{ s.count }} hlasů">
+              {{ s.count }} hlasů
+            </span>
+          </div>
+          <div class="result-item__track" role="progressbar" aria-valuenow="{{ s.percent }}" aria-valuemin="0"
+            aria-valuemax="100" aria-label="{{ s.percent }} %">
+            <div class="result-item__fill" style="width: {{ s.percent }}%;"></div>
+          </div>
+          <span class="result-item__percent">{{ s.percent }} %</span>
+        </li>
+        {% endfor %}
+      </ol>
+
+      <div class="btn-row" style="margin-top: 1.8rem;">
+        <a id="btn-back-vote" href="/" class="btn btn--primary">
+          Hlasovat znovu
         </a>
       </div>
-    </form>
-  </div>
-  {% endif %}
+    </section>
 
-  <!-- ── VÝSLEDKY ───────────────────────────────────────────────── -->
-  {% if view == "results" %}
-  <div class="card">
-    <h2>{{ question }}</h2>
-
-    {% if flash_msg %}
-    <div class="flash {{ flash_type }}">{{ flash_msg }}</div>
-    {% endif %}
-
-    <div class="total-badge">
-      Celkem hlasů: <strong>{{ total }}</strong>
-    </div>
-
-    <div class="results-list">
-      {% for s in stats %}
-      <div class="result-item">
-        <div class="result-meta">
-          <span class="result-label">
-            <strong>{{ s.key }})</strong> {{ s.label }}
-          </span>
-          <span class="result-count">{{ s.count }} hlasů</span>
-        </div>
-        <div class="bar-track">
-          <div class="bar-fill" style="width: {{ s.percent }}%;"></div>
-        </div>
-        <span class="result-percent">{{ s.percent }} %</span>
-      </div>
-      {% endfor %}
-    </div>
-
-    <div class="btn-row" style="margin-top:1.8rem">
-      <a id="btn-back-vote" href="/" class="btn btn-primary">
-        Hlasovat znovu
-      </a>
-    </div>
-  </div>
-
-  <!-- Reset sekce -->
-  <div class="card" style="padding: 0;">
-    <details id="reset-section">
-      <summary>Resetovat hlasování</summary>
-      <div class="reset-body">
-        <form method="POST" action="/reset" style="display:contents">
-          <input id="reset-token" type="password" name="token" placeholder="Zadej reset token…" autocomplete="off"
-            required />
-          <button id="btn-reset" type="submit" class="btn btn-danger">
+    <details class="reset-card">
+      <summary id="reset-section">Resetovat hlasování</summary>
+      <div class="reset-card__body">
+        <form method="POST" action="/reset" style="display: contents;">
+          <label for="reset-token" class="visually-hidden">Reset token</label>
+          <input id="reset-token" class="reset-card__input" type="password" name="token"
+            placeholder="Zadej reset token…" autocomplete="off" required />
+          <button id="btn-reset" type="submit" class="btn btn--danger">
             Resetovat
           </button>
         </form>
       </div>
     </details>
-  </div>
-  {% endif %}
+    {% endif %}
+
+  </main>
 
 </body>
 

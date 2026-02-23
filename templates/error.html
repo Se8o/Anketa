@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="cs">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chyba {{ code }} – Anketa</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d2e;
+            --accent: #6c63ff;
+            --accent-2: #a78bfa;
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --border: #2d3149;
+            --radius: 14px;
+            --shadow: 0 8px 32px rgba(0, 0, 0, .45);
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .error-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 3rem 2.5rem;
+            max-width: 480px;
+            width: 100%;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .error-code {
+            font-size: 5rem;
+            font-weight: 800;
+            line-height: 1;
+            background: linear-gradient(135deg, var(--accent), var(--accent-2));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: .5rem;
+        }
+
+        .error-message {
+            color: var(--muted);
+            font-size: 1.05rem;
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            display: inline-block;
+            padding: .7rem 1.5rem;
+            background: var(--accent);
+            color: #fff;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: .95rem;
+            text-decoration: none;
+            transition: opacity 150ms;
+        }
+
+        .btn:hover {
+            opacity: .88;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="error-card" role="main">
+        <p class="error-code" aria-label="Chybový kód {{ code }}">{{ code }}</p>
+        <p class="error-message">{{ message }}</p>
+        <a href="/" class="btn">Zpět na anketu</a>
+    </div>
+</body>
+
+</html>
