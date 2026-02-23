@@ -3,7 +3,8 @@
 Jednoduchá hlasovací webová aplikace napsaná v Pythonu s Flaskem. Uživatel odpovídá na otázku, výsledky se ukládají na server a jsou sdílené mezi všemi návštěvníky. Hlasování lze resetovat pomocí tokenu.
 
 **Stránku je možné navštívít na této adrese:** https://anketa-e1jd.onrender.com
-token pro reset je:tajneHeslo
+
+**token pro reset je:** tajneHeslo
 
 ## Jak to funguje
 
