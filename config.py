@@ -19,6 +19,7 @@ class AppConfig:
 
     reset_token: str
     data_file: str
+    ip_votes_file: str
     question: str
     choices: dict[str, str] = field(default_factory=dict)
 
@@ -40,6 +41,7 @@ config = AppConfig(
     secret_key=os.environ.get("SECRET_KEY", "dev-secret-change-in-production"),
     reset_token=os.environ.get("RESET_TOKEN", _RESET_TOKEN_PLACEHOLDER),
     data_file=os.environ.get("DATA_FILE", "data/votes.json"),
+    ip_votes_file=os.environ.get("IP_VOTES_FILE", "data/ip_votes.json"),
     question="Kolik otevřených záložek je ještě normální?",
     choices={
         "a": "1–5 (jsem organizovaný člověk)",
@@ -53,5 +55,6 @@ config = AppConfig(
 SECRET_KEY: str = config.secret_key
 RESET_TOKEN: str = config.reset_token
 DATA_FILE: str = config.data_file
+IP_VOTES_FILE: str = config.ip_votes_file
 QUESTION: str = config.question
 CHOICES: dict[str, str] = config.choices
